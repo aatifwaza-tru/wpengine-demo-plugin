@@ -1,24 +1,43 @@
-name: Deploy to WP Engine
+name: CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, qa, dev]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to WP Engine
-        uses: wpengine/github-action-wpe-site-deploy@v3
+      - uses: actions/checkout@v4
         with:
-          WPE_SSHG_KEY_PRIVATE: ${{ secrets.WPE_SSHG_KEY_PRIVATE }}
-          WPE_ENV: your-wpengine-install-name   # <-- CHANGE THIS to your WP Engine install name
-          SRC_PATH: "wp-content/"
-          REMOTE_PATH: "wp-content/"
-          PHP_LINT: true
-          CACHE_CLEAR: true
+          fetch-depth: 0
+
+      - name: Deploy on WP Engine
+        env:
+          WP_ENGINE: ${{ secrets.WPE_SSHG_KEY_PRIVATE }}
+          PROD: ${{ secrets.WPE_PROD_ENV_NAME }}
+          STAG: ${{ secrets.WPE_STAGING_ENV_NAME }}
+          DEV: ${{ secrets.WPE_DEV_ENV_NAME }}
+        run: |
+          # Determine branch
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+
+          if [ "$BRANCH_NAME" == "main" ]; then
+            DEPLOY=${PROD}
+          elif [ "$BRANCH_NAME" == "qa" ]; then
+            DEPLOY=${STAG}
+          elif [ "$BRANCH_NAME" == "dev" ]; then
+            DEPLOY=${DEV}
+          else
+            echo "Unknown branch: $BRANCH_NAME"
+            exit 1
+          fi
+
+          mkdir ~/.ssh
+          echo $WP_ENGINE | base64 --decode > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H -p 22 git.wpengine.com >> ~/.ssh/known_hosts
+
+          git remote add production git@git.wpengine.com:production/${DEPLOY}.git
+          git push -f production $BRANCH_NAME
