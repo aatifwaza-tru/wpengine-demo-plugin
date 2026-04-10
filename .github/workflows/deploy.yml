@@ -15,7 +15,7 @@ jobs:
 
       - name: Deploy on WP Engine
         env:
-          WP_ENGINE: ${{ secrets.WPE_SSHG_KEY_PRIVATE }}
+          WPE_SSHG_KEY_PRIVATE: ${{ secrets.WPE_SSHG_KEY_PRIVATE }}
           PROD: ${{ secrets.WPE_PROD_ENV_NAME }}
           STAG: ${{ secrets.WPE_STAGING_ENV_NAME }}
           DEV: ${{ secrets.WPE_DEV_ENV_NAME }}
@@ -35,7 +35,7 @@ jobs:
           fi
 
           mkdir ~/.ssh
-          echo $WP_ENGINE | base64 --decode > ~/.ssh/id_rsa
+          echo $WPE_SSHG_KEY_PRIVATE | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H -p 22 git.wpengine.com >> ~/.ssh/known_hosts
 
